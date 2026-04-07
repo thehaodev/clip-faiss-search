@@ -1,0 +1,14 @@
+jupyterlab
+notebook
+ipykernel
+python-dotenv
+numpy
+pandas
+pillow
+matplotlib
+tqdm
+torch
+torchvision
+transformers
+faiss-cpu
+streamlit
