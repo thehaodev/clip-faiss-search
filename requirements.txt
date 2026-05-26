@@ -10,5 +10,6 @@ tqdm
 torch
 torchvision
 transformers
+huggingface-hub
 faiss-cpu
 streamlit
