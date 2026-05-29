@@ -1,4 +1,6 @@
 import json
+import os
+import re
 from pathlib import Path
 
 import faiss
@@ -8,7 +10,10 @@ from huggingface_hub import snapshot_download
 from transformers import CLIPModel, CLIPProcessor
 
 
-MODEL_NAME = "openai/clip-vit-base-patch32"
+MODEL_NAME = os.getenv(
+    "CLIP_MODEL_NAME",
+    "data/processed/finetuned_models/openai_clip-vit-large-patch14_projection",
+)
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
@@ -29,8 +34,35 @@ def find_project_root(start_path=None):
 
 
 PROJECT_ROOT = find_project_root()
-FAISS_INDEX_PATH = PROJECT_ROOT / "data/processed/clip_faiss_index_full.index"
-METADATA_PATH = PROJECT_ROOT / "data/processed/clip_full_metadata.json"
+METADATA_PATH = Path(
+    os.getenv(
+        "CLIP_METADATA_PATH",
+        PROJECT_ROOT / "data/processed/clip_full_metadata.json",
+    )
+)
+
+
+def model_slug(model_name):
+    return re.sub(r"[^A-Za-z0-9_.-]+", "_", model_name).strip("_")
+
+
+def default_faiss_index_path(model_name):
+    if model_name == "openai/clip-vit-base-patch32":
+        return PROJECT_ROOT / "data/processed/clip_faiss_index_full.index"
+
+    return (
+        PROJECT_ROOT
+        / "data/processed/model_benchmarks"
+        / f"{model_slug(model_name)}_faiss.index"
+    )
+
+
+FAISS_INDEX_PATH = Path(
+    os.getenv(
+        "CLIP_FAISS_INDEX_PATH",
+        default_faiss_index_path(MODEL_NAME),
+    )
+)
 
 
 def load_metadata(metadata_path=METADATA_PATH):
@@ -61,6 +93,10 @@ def resolve_model_source(model_name=MODEL_NAME):
     if model_path.exists():
         return str(model_path)
 
+    project_model_path = PROJECT_ROOT / model_name
+    if project_model_path.exists():
+        return str(project_model_path)
+
     try:
         return snapshot_download(model_name, local_files_only=True)
     except Exception:
@@ -69,7 +105,12 @@ def resolve_model_source(model_name=MODEL_NAME):
 
 def load_clip_model(model_name=MODEL_NAME, device=DEVICE):
     model_source = resolve_model_source(model_name)
-    model = CLIPModel.from_pretrained(model_source, use_safetensors=False)
+    model_source_path = Path(model_source)
+    model_kwargs = {}
+    if not (model_source_path.exists() and (model_source_path / "model.safetensors").exists()):
+        model_kwargs["use_safetensors"] = False
+
+    model = CLIPModel.from_pretrained(model_source, **model_kwargs)
     processor = CLIPProcessor.from_pretrained(model_source)
     model.to(device)
     model.eval()

@@ -23,10 +23,18 @@ from src.retrieval_core import (
     load_clip_model as core_load_clip_model,
     load_faiss_index as core_load_faiss_index,
     load_metadata as core_load_metadata,
+    model_slug,
 )
 
 
-RESULTS_PATH = PROJECT_ROOT / "data/processed/full_recall_results.json"
+if MODEL_NAME == "openai/clip-vit-base-patch32":
+    RESULTS_PATH = PROJECT_ROOT / "data/processed/full_recall_results.json"
+else:
+    RESULTS_PATH = (
+        PROJECT_ROOT
+        / "data/processed/model_benchmarks"
+        / f"{model_slug(MODEL_NAME)}_recall_results.json"
+    )
 
 
 @st.cache_resource(show_spinner="Loading CLIP model...")
@@ -142,11 +150,6 @@ def show_debug_self_test(model, processor, index, metadata):
 
     st.subheader("Debug self-test")
     st.write(f"Debug query: `{debug_query}`")
-    st.caption(
-        "Expected roughly: Rank 1 2982928615.jpg score ~0.346, "
-        "Rank 2 3597924257.jpg score ~0.343, "
-        "Rank 3 3540416139.jpg score ~0.339."
-    )
     st.write(
         [
             {
