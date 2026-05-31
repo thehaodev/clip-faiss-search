@@ -12,7 +12,7 @@ from transformers import CLIPModel, CLIPProcessor
 
 MODEL_NAME = os.getenv(
     "CLIP_MODEL_NAME",
-    "data/processed/finetuned_models/openai_clip-vit-large-patch14_projection",
+    "data/processed/clip_l14_finetune/clip_l14_last_layers_1/best_model",
 )
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -49,6 +49,15 @@ def model_slug(model_name):
 def default_faiss_index_path(model_name):
     if model_name == "openai/clip-vit-base-patch32":
         return PROJECT_ROOT / "data/processed/clip_faiss_index_full.index"
+
+    model_path = Path(model_name)
+    project_model_path = PROJECT_ROOT / model_path
+    normalized_model_path = project_model_path if project_model_path.exists() else model_path
+    if "clip_l14_finetune" in normalized_model_path.as_posix():
+        return (
+            PROJECT_ROOT
+            / "data/processed/faiss_finetuned_clip_l14/faiss_index_finetuned_clip_l14.index"
+        )
 
     return (
         PROJECT_ROOT
